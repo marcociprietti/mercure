@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -56,7 +57,10 @@ func (h *Hub) initHandler() {
 		ContentSecurityPolicy: csp,
 	})
 
-	if len(h.corsOrigins) == 0 {
+	h.logger.Check(zap.InfoLevel, fmt.Sprintf("CORS origins: %v", h.corsOrigins))
+	h.logger.Check(zap.InfoLevel, fmt.Sprintf("CORS origin regex: %s", h.corsOriginsRegex))
+
+	if len(h.corsOrigins) == 0 && h.corsOriginsRegex == "" {
 		h.handler = secureMiddleware.Handler(router)
 
 		return
@@ -64,11 +68,32 @@ func (h *Hub) initHandler() {
 
 	h.handler = secureMiddleware.Handler(
 		handlers.CORS(
-			handlers.AllowCredentials(),
-			handlers.AllowedOrigins(h.corsOrigins),
-			handlers.AllowedHeaders([]string{"authorization", "cache-control", "last-event-id"}),
+			h.createCORSOptions()...,
 		)(router),
 	)
+}
+
+func (h *Hub) createCORSOptions() []handlers.CORSOption {
+	opts := []handlers.CORSOption{
+		handlers.AllowCredentials(),
+		handlers.AllowedHeaders([]string{"authorization", "cache-control", "last-event-id"}),
+	}
+
+	if len(h.corsOrigins) > 0 {
+		opts = append(opts, handlers.AllowedOrigins(h.corsOrigins))
+	} else if h.corsOriginsRegex != "" {
+		opts = append(opts, handlers.AllowedOriginValidator(
+			func(origin string) bool {
+				r, err := regexp.Compile(h.corsOriginsRegex)
+				if err != nil {
+					return false
+				}
+
+				return r.MatchString(origin)
+			}))
+	}
+
+	return opts
 }
 
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {

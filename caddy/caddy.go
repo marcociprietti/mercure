@@ -81,6 +81,8 @@ type Mercure struct {
 	// Allowed CORS origins.
 	CORSOrigins []string `json:"cors_origins,omitempty"`
 
+	CORSOriginsRegex string `json:"cors_origins_regex,omitempty"`
+
 	// Transport to use.
 	TransportURL string `json:"transport_url,omitempty"`
 
@@ -210,6 +212,9 @@ func (m *Mercure) Provision(ctx caddy.Context) error { //nolint:funlen
 	if len(m.CORSOrigins) > 0 {
 		opts = append(opts, mercure.WithCORSOrigins(m.CORSOrigins))
 	}
+	if m.CORSOriginsRegex != "" {
+		opts = append(opts, mercure.WithCORSOriginsRegex(m.CORSOriginsRegex))
+	}
 	if m.ProtocolVersionCompatibility != 0 {
 		opts = append(opts, mercure.WithProtocolVersionCompatibility(m.ProtocolVersionCompatibility))
 	}
@@ -331,6 +336,13 @@ func (m *Mercure) UnmarshalCaddyfile(d *caddyfile.Dispenser) error { //nolint:fu
 				}
 
 				m.CORSOrigins = ra
+
+			case "cors_origins_regex":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+
+				m.CORSOriginsRegex = d.Val()
 
 			case "transport_url":
 				if !d.NextArg() {

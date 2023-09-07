@@ -203,6 +203,14 @@ func WithCORSOrigins(origins []string) Option {
 	}
 }
 
+func WithCORSOriginsRegex(expression string) Option {
+	return func(o *opt) error {
+		o.corsOriginsRegex = expression
+
+		return nil
+	}
+}
+
 // WithTransport sets the transport to use.
 func WithTransport(t Transport) Option {
 	return func(o *opt) error {
@@ -270,6 +278,7 @@ type opt struct {
 	allowedHosts                 []string
 	publishOrigins               []string
 	corsOrigins                  []string
+	corsOriginsRegex             string
 	cookieName                   string
 	protocolVersionCompatibility int
 }
